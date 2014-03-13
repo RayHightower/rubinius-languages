@@ -41,7 +41,7 @@ class Plus < KPeg::CompiledParser
     return _tmp
   end
 
-  # expr = (expr:e1 ws "+" ws expr:e2 { e1 + e2 } | number)
+  # expr = (expr:e1 ws "+" ws expr:e2 { e1 + e2 } | expr:e1 ws "-" ws expr:e2 { e1 - e2 } | number)
   def _expr
 
     _save = self.pos
@@ -86,6 +86,46 @@ class Plus < KPeg::CompiledParser
 
       break if _tmp
       self.pos = _save
+
+      _save2 = self.pos
+      while true # sequence
+        _tmp = apply(:_expr)
+        e1 = @result
+        unless _tmp
+          self.pos = _save2
+          break
+        end
+        _tmp = apply(:_ws)
+        unless _tmp
+          self.pos = _save2
+          break
+        end
+        _tmp = match_string("-")
+        unless _tmp
+          self.pos = _save2
+          break
+        end
+        _tmp = apply(:_ws)
+        unless _tmp
+          self.pos = _save2
+          break
+        end
+        _tmp = apply(:_expr)
+        e2 = @result
+        unless _tmp
+          self.pos = _save2
+          break
+        end
+        @result = begin;  e1 - e2 ; end
+        _tmp = true
+        unless _tmp
+          self.pos = _save2
+        end
+        break
+      end # end sequence
+
+      break if _tmp
+      self.pos = _save
       _tmp = apply(:_number)
       break if _tmp
       self.pos = _save
@@ -122,7 +162,7 @@ class Plus < KPeg::CompiledParser
   Rules = {}
   Rules[:_ws] = rule_info("ws", "/[ \\t\\n]+/")
   Rules[:_number] = rule_info("number", "< /[0-9]*/ > { text.to_i }")
-  Rules[:_expr] = rule_info("expr", "(expr:e1 ws \"+\" ws expr:e2 { e1 + e2 } | number)")
+  Rules[:_expr] = rule_info("expr", "(expr:e1 ws \"+\" ws expr:e2 { e1 + e2 } | expr:e1 ws \"-\" ws expr:e2 { e1 - e2 } | number)")
   Rules[:_root] = rule_info("root", "expr:e { @result = e }")
   # :startdoc:
 end
